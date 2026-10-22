@@ -1,0 +1,13 @@
+BULUTTA APK OLUŞTURMA (GitHub Actions)
+
+1. GitHub.com hesabı açın veya giriş yapın.
+2. New repository ile yeni bir depo oluşturun. Örneğin: SokakSampiyonuAndroid
+3. ZIP dosyasını bilgisayarda çıkartın. GitHub deposunda Add file > Upload files ile ZIP'in içindeki TÜM DOSYA VE KLASÖRLERİ yükleyip Commit changes deyin. .github klasörünün de yüklendiğinden emin olun.
+4. Depoda Actions sekmesine gidin. Build Android APK iş akışını seçip Run workflow düğmesine basın.
+5. İşlem tamamlanınca çalıştırmanın sayfasına dönün. Artifacts bölümündeki SokakSampiyonu-debug-apk dosyasını indirin.
+6. İndirilen artifact ZIP'ini açın. İçindeki app-debug.apk dosyasını Android telefona aktarın ve açarak yükleyin. İstenirse Android ayarlarından bu kaynağa uygulama yükleme izni verin.
+
+Notlar:
+- Bu işlem internet bağlantısı ve GitHub hesabı gerektirir.
+- Bu, test amaçlı debug APK üretir; Play Store'a yayımlamak için imzalı release derlemesi gerekir.
+- APK yüklerken yalnızca kendi oluşturduğunuz ve güvendiğiniz dosyaları kurun.
