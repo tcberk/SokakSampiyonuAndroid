@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sokak Şampiyonu: Futbol Efsanesi</title>
+    <!-- Tailwind CSS for modern UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js for immersive sound effects and retro chiptune background music -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;600;800&display=swap');
+        
+        .arcade-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+            touch-action: none;
+        }
+        canvas {
+            image-rendering: pixelated;
+            box-shadow: 0 0 40px rgba(16, 185, 129, 0.3);
+        }
+        .glow-text {
+            text-shadow: 0 0 10px rgba(52, 211, 153, 0.8), 0 0 20px rgba(52, 211, 153, 0.4);
+        }
+        .btn-retro {
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 0 #047857;
+        }
+        .btn-retro:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #047857;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-6">
+
+    <header class="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 mb-4 backdrop-blur-md shadow-lg">
+        <div class="flex items-center space-x-3 mb-2 md:mb-0">
+            <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-slate-950 font-extrabold text-xl shadow-inner">⚽</div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-black tracking-wider glow-text uppercase arcade-font text-emerald-400">Sokak Şampiyonu</h1>
+                <p class="text-xs text-slate-400">Futbol Aksiyon & Macera RPG</p>
+            </div>
+        </div>
+        <div id="quest-tracker" class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700 text-sm flex items-center space-x-3">
+            <span class="text-yellow-400 font-bold">📜 Görev:</span>
+            <span id="current-quest" class="text-slate-300">Sokak çetesini yen ve topu geri al!</span>
+        </div>
+    </header>
+
+    <main class="w-full max-w-5xl flex flex-col items-center relative">
+        
+        <!-- Game Canvas Container -->
+        <div id="game-container" class="relative w-full rounded-2xl overflow-hidden border-2 border-emerald-500/40 bg-slate-950 shadow-2xl flex items-center justify-center">
+            <canvas id="gameCanvas" width="900" height="500" class="w-full h-auto max-h-[70vh] object-contain"></canvas>
+
+            <!-- Dialogue / Story Overlay Modal -->
+            <div id="dialogue-box" class="absolute bottom-4 left-4 right-4 bg-slate-900/95 border-2 border-yellow-500 rounded-xl p-4 hidden backdrop-blur-md shadow-2xl flex flex-col md:flex-row items-center justify-between z-20">
+                <div class="flex items-start space-x-4 mb-3 md:mb-0">
+                    <div id="npc-avatar" class="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center text-slate-950 font-bold text-xl shrink-0">🤖</div>
+                    <div>
+                        <h3 id="npc-name" class="font-bold text-yellow-400 text-sm arcade-font">Sokak Kabadayısı</h3>
+                        <p id="npc-text" class="text-sm text-slate-200 mt-1">Hey sen! Bizim mahallede top oynamanın bedeli var!</p>
+                    </div>
+                </div>
+                <button onclick="closeDialogue()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-950 px-5 py-2 rounded-lg font-bold text-xs arcade-fn btn-retro cursor-pointer">DEVAM ET</button>
+            </div>
+
+            <!-- Main Menu / Start Overlay -->
+            <div id="menu-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center z-30 p-6 text-center">
+                <div class="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center text-slate-950 text-4xl font-black mb-4 animate-bounce">⚡</div>
+                <h2 class="text-3xl md:text-5xl font-black text-white mb-2 arcade-font glow-text">FUTBOL MACERASI</h2>
+                <p class="text-slate-400 max-w-md mb-6 text-sm">Sokaklardan Şampiyonlar Ligi'ne uzanan tehlikeli futbol yolculuğu. Engelleri aş, şutunu geliştir, patronları yen!</p>
+                <button onclick="startGame()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-8 py-4 rounded-xl text-lg arcade-font btn-retro cursor-pointer shadow-lg">MACERAYA BAŞLA</button>
+            </div>
+
+            <!-- Game Over / Victory Overlay -->
+            <div id="end-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-30 p-6 text-center hidden">
+                <h2 id="end-title" class="text-3xl md:text-5xl font-black text-emerald-400 mb-4 arcade-font glow-text">ZAFER!</h2>
+                <p id="end-message" class="text-slate-300 max-w-md mb-6 text-sm">Bölgeyi ele geçirdin ve yeni bir yetenek kazandın!</p>
+                <button onclick="nextLevel()" id="end-btn" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-8 py-4 rounded-xl text-lg arcade-font btn-retro cursor-pointer">SONRAKİ BÖLGE</button>
+            </div>
+        </div>
+
+        <!-- Player Status Bar -->
+        <div class="w-full grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                <span class="text-xs text-slate-400 font-bold">CAN (HP)</span>
+                <span id="stat-hp" class="text-emerald-400 font-black arcade-font">100/100</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                <span class="text-xs text-slate-400 font-bold">ENERJİ (ÖZEL ŞUT)</span>
+                <span id="stat-energy" class="text-yellow-400 font-black arcade-font">100%</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                <span class="text-xs text-slate-400 font-bold">ALTIN</span>
+                <span id="stat-gold" class="text-amber-400 font-black arcade-font">0</span>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                <span class="text-xs text-slate-400 font-bold">SEVİYE / BÖLGE</span>
+                <span id="stat-level" class="text-cyan-400 font-black arcade-font">1/4</span>
+            </div>
+        </div>
+
+        <!-- Mobile & Desktop Controls Guide -->
+        <div class="w-full flex flex-col md:flex-row items-center justify-between bg-slate-900/60 border border-slate-800 rounded-xl p-4 mt-3 text-xs text-slate-400 gap-3">
+            <div class="flex items-center space-x-2">
+                <span class="bg-slate-800 px-2 py-1 rounded text-slate-200 font-mono">OK TUŞLARI / WASD</span>
+                <span>Karakter Hareketi</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="bg-slate-800 px-2 py-1 rounded text-slate-200 font-mono">BOŞLUK / J</span>
+                <span>Normal Şut / Pas</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="bg-slate-800 px-2 py-1 rounded text-slate-200 font-mono">F / K</span>
+                <span>Alevli Süper Şut (Enerji Gerekir)</span>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Audio Synthesizer setup using Tone.js
+        let synth, kickSynth, bgmSynth, isAudioInitialized = false;
+
+        function initAudio() {
+            if (isAudioInitialized) return;
+            try {
+                synth = new Tone.Synth({
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }
+                }).toDestination();
+
+                kickSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.05,
+                    octaves: 4,
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.001, decay: 0.3, sustain: 0, release: 0.1 }
+                }).toDestination();
+
+                // Retro background arpeggio loop
+                bgmSynth = new Tone.Synth({
+                    oscillator: { type: 'square' },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }
+                }).toDestination();
+
+                Tone.start();
+                isAudioInitialized = true;
+            } catch (e) {
+                console.log("Audio context blocked or unavailable");
+            }
+        }
+
+        function playSound(type) {
+            if (!isAudioInitialized) return;
+            try {
+                if (type === 'kick') {
+                    kickSynth.triggerAttackRelease("C2", "8n");
+                } else if (type === 'hit') {
+                    synth.triggerAttackRelease("G3", "16n");
+                } else if (type === 'score') {
+                    synth.triggerAttackRelease("C5", "8n");
+                    setTimeout(() => synth.triggerAttackRelease("G5", "4n"), 100);
+                } else if (type === 'super') {
+                    kickSynth.triggerAttackRelease("F1", "4n");
+                    synth.triggerAttackRelease("E5", "4n");
+                }
+            } catch (e) {}
+        }
+
+        // Game State & Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameRunning = false;
+        let dialogueActive = false;
+        let currentLevel = 1;
+        
+        let player = {
+            x: 100,
+            y: 250,
+            radius: 18,
+            speed: 4,
+            color: '#34d399',
+            hp: 100,
+            maxHp: 100,
+            energy: 100,
+            gold: 0,
+            hasBall: true
+        };
+
+        let ball = {
+            x: 130,
+            y: 250,
+            vx: 0,
+            vy: 0,
+            radius: 10,
+            speed: 8,
+            isSuper: false
+        };
+
+        let enemies = [];
+        let obstacles = [];
+        let goalPost = { x: 840, y: 175, width: 40, height: 150 };
+        
+        // Input state
+        const keys = {};
+
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ' || e.key.toLowerCase() === 'j') {
+                shootBall(false);
+            }
+            if (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'k') {
+                shootBall(true);
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        const levels = [
+            {
+                id: 1,
+                name: "Sokak Arası Sahası",
+                quest: "Mahallenin serserilerini dribling ile geç ve kaleye şutla!",
+                enemyCount: 3,
+                enemySpeed: 1.5,
+                bgTheme: "#064e3b" // Dark Emerald Street
+            },
+            {
+                id: 2,
+                name: "Beton Park",
+                quest: "Parkın güvenlik dronelarını ve agresif bekleri atlat!",
+                enemyCount: 5,
+                enemySpeed: 2.2,
+                bgTheme: "#1e293b" // Slate concrete
+            },
+            {
+                id: 3,
+                name: "Yeraltı Kafes Futbolu",
+                quest: "Karanlık kafesteki ustaları mağlup et!",
+                enemyCount: 7,
+                enemySpeed: 2.8,
+                bgTheme: "#450a0a" // Dark crimson cage
+            },
+            {
+                id: 4,
+                name: "Şampiyonlar Arenası (FİNAL)",
+                quest: "Şampiyonluk kupası için Kaptan Varis'i yen!",
+                enemyCount: 8,
+                enemySpeed: 3.5,
+                bgTheme: "#172554" // Royal stadium blue
+            }
+        ];
+
+        function loadLevel(lvlIndex) {
+            currentLevel = lvlIndex;
+            const lvlData = levels[lvlIndex - 1];
+            
+            document.getElementById('current-quest').innerText = lvlData.quest;
+            document.getElementById('stat-level').innerText = `${currentLevel}/${levels.length}`;
+
+            // Reset player position
+            player.x = 100;
+            player.y = 250;
+            player.hasBall = true;
+
+            ball.x = player.x + 30;
+            ball.y = player.y;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.isSuper = false;
+
+            // Spawn enemies
+            enemies = [];
+            for (let i = 0; i < lvlData.enemyCount; i++) {
+                enemies.push({
+                    x: 400 + Math.random() * 350,
+                    y: 100 + Math.random() * 300,
+                    radius: 16,
+                    speed: lvlData.enemySpeed + (Math.random() * 0.8),
+                    color: currentLevel === 4 ? '#facc15' : '#ef4444',
+                    isBoss: (currentLevel === 4 && i === 0)
+                });
+            }
+
+            // Spawn obstacles (guards/cones/defenders)
+            obstacles = [
+                { x: 300, y: 150, width: 20, height: 80 },
+                { x: 600, y: 270, width: 20, height: 80 }
+            ];
+        }
+
+        function startGame() {
+            initAudio();
+            document.getElementById('menu-overlay').classList.add('hidden');
+            gameRunning = true;
+            loadLevel(1);
+            showDialogue("Sokak Kaptanı", "Hey çaylak! Mahallenin namusunu kurtarmak istiyorsan o topu kaleye sokmalısın. Rakipler seni durdurmaya çalışacak!");
+            requestAnimationFrame(gameLoop);
+        }
+
+        function showDialogue(name, text) {
+            dialogueActive = true;
+            document.getElementById('npc-name').innerText = name;
+            document.getElementById('npc-text').innerText = text;
+            document.getElementById('dialogue-box').classList.remove('hidden');
+        }
+
+        function closeDialogue() {
+            dialogueActive = false;
+            document.getElementById('dialogue-box').classList.add('hidden');
+        }
+
+        function shootBall(isSuper) {
+            if (!gameRunning || dialogueActive) return;
+
+            if (isSuper) {
+                if (player.energy < 40) {
+                    playSound('hit');
+                    return; // Not enough energy
+                }
+                player.energy -= 40;
+                ball.vx = 22;
+                ball.vy = (Math.random() - 0.5) * 4;
+                ball.isSuper = true;
+                playSound('super');
+            } else {
+                ball.vx = 14;
+                ball.vy = (Math.random() - 0.5) * 6;
+                ball.isSuper = false;
+                playSound('kick');
+            }
+            player.hasBall = false;
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            if (!dialogueActive) {
+                update();
+            }
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Player Movement
+            let dx = 0;
+            let dy = 0;
+            if (keys['arrowup'] || keys['w']) dy -= player.speed;
+            if (keys['arrowdown'] || keys['s']) dy += player.speed;
+            if (keys['arrowleft'] || keys['a']) dx -= player.speed;
+            if (keys['arrowright'] || keys['d']) dx += player.speed;
+
+            player.x = Math.max(player.radius, Math.min(canvas.width - 200, player.x + dx));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y + dy));
+
+            // Energy regeneration
+            if (player.energy < 100) {
+                player.energy = Math.min(100, player.energy + 0.15);
+            }
+
+            // Ball attachment or movement
+            if (player.hasBall) {
+                ball.x = player.x + 22;
+                ball.y = player.y;
+            } else {
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+                ball.vx *= 0.98; // Friction
+                ball.vy *= 0.98;
+
+                // Ball retrieval check
+                let distToPlayer = Math.hypot(player.x - ball.x, player.y - ball.y);
+                if (distToPlayer < player.radius + ball.radius && Math.abs(ball.vx) < 3) {
+                    player.hasBall = true;
+                    ball.isSuper = false;
+                }
+
+                // Wall bounce top/bottom
+                if (ball.y < ball.radius || ball.y > canvas.height - ball.radius) {
+                    ball.vy *= -1;
+                }
+
+                // Goal check
+                if (ball.x >= goalPost.x && ball.y >= goalPost.y && ball.y <= goalPost.y + goalPost.height) {
+                    playSound('score');
+                    triggerVictory();
+                    return;
+                }
+
+                // Miss / Out of bounds reset if ball stops moving and didn't score
+                if (ball.x > canvas.width || ball.x < 0 || (Math.abs(ball.vx) < 0.5 && !player.hasBall)) {
+                    player.hasBall = true;
+                    ball.isSuper = false;
+                }
+            }
+
+            // Enemy AI & Collision
+            enemies.forEach(enemy => {
+                // Move towards player or ball
+                let targetX = player.hasBall ? player.x : ball.x;
+                let targetY = player.hasBall ? player.y : ball.y;
+
+                let angle = Math.atan2(targetY - enemy.y, targetX - enemy.x);
+                enemy.x += Math.cos(angle) * enemy.speed;
+                enemy.y += Math.sin(angle) * enemy.speed;
+
+                // Enemy collision with player
+                let pDist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                if (pDist < player.radius + enemy.radius) {
+                    player.hp -= 0.5;
+                    playSound('hit');
+                    if (player.hp <= 0) {
+                        triggerGameOver();
+                    }
+                }
+
+                // Super ball destroys enemies momentarily
+                if (!player.hasBall && ball.isSuper) {
+                    let bDist = Math.hypot(ball.x - enemy.x, ball.y - enemy.y);
+                    if (bDist < ball.radius + enemy.radius) {
+                        enemy.x += 60; // Knockback
+                        player.gold += 15;
+                    }
+                }
+            });
+
+            // Obstacle collision
+            obstacles.forEach(obs => {
+                if (player.x + player.radius > obs.x && player.x - player.radius < obs.x + obs.width &&
+                    player.y + player.radius > obs.y && player.y - player.radius < obs.y + obs.height) {
+                    player.x -= dx;
+                    player.y -= dy;
+                }
+            });
+
+            // Update UI Stats
+            document.getElementById('stat-hp').innerText = `${Math.max(0, Math.floor(player.hp))}/${player.maxHp}`;
+            document.getElementById('stat-energy').innerText = `${Math.floor(player.energy)}%`;
+            document.getElementById('stat-gold').innerText = player.gold;
+        }
+
+        function render() {
+            const lvlData = levels[currentLevel - 1];
+            
+            // Background Turf
+            ctx.fillStyle = lvlData.bgTheme;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Pitch Markings (Lines & Center Circle)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 100, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            // Goal Post
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(goalPost.x, goalPost.y, goalPost.width, goalPost.height);
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(goalPost.x, goalPost.y, goalPost.width, goalPost.height);
+
+            // Obstacles
+            ctx.fillStyle = '#475569';
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.strokeStyle = '#94a3b8';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+            });
+
+            // Enemies
+            enemies.forEach(enemy => {
+                ctx.fillStyle = enemy.color;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Enemy Face / Details
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(enemy.x - 5, enemy.y - 4, 3, 3);
+                ctx.fillRect(enemy.x + 2, enemy.y - 4, 3, 3);
+            });
+
+            // Player Character
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#065f46';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Player Jersey details (Number 10)
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 10px Outfit';
+            ctx.fillText('10', player.x - 6, player.y + 4);
+
+            // Ball
+            ctx.fillStyle = ball.isSuper ? '#ef4444' : '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            if (ball.isSuper) {
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius + 4, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function triggerVictory() {
+            gameRunning = false;
+            player.gold += 50;
+            player.hp = Math.min(player.maxHp, player.hp + 30); // Heal bonus
+
+            const overlay = document.getElementById('end-overlay');
+            const title = document.getElementById('end-title');
+            const msg = document.getElementById('end-message');
+            const btn = document.getElementById('end-btn');
+
+            overlay.classList.remove('hidden');
+
+            if (currentLevel < levels.length) {
+                title.innerText = "BÖLGE TEMİZLENDİ!";
+                msg.innerText = `Harika şut! ${levels[currentLevel - 1].name} kontrol altına alındı. Ödül olarak 50 Altın kazandın!`;
+                btn.innerText = "SONRAKİ BÖLGE";
+            } else {
+                title.innerText = "ŞAMPİYONSUN!";
+                msg.innerText = "Tebrikler! Tüm mahalleleri ve şampiyonları yenerek sokakların efsanevi futbol kralı oldun!";
+                btn.innerText = "YENİDEN BAŞLA";
+            }
+        }
+
+        function triggerGameOver() {
+            gameRunning = false;
+            const overlay = document.getElementById('end-overlay');
+            const title = document.getElementById('end-title');
+            const msg = document.getElementById('end-message');
+            const btn = document.getElementById('end-btn');
+
+            overlay.classList.remove('hidden');
+            title.innerText = "BAYILDIN!";
+            msg.innerText = "Rakipler çok sertti! Enerjin tükendi. Tekrar denemek ister misin?";
+            btn.innerText = "TEKRAR DENE";
+            currentLevel = 1;
+            player.hp = 100;
+        }
+
+        function nextLevel() {
+            document.getElementById('end-overlay').classList.add('hidden');
+            if (currentLevel < levels.length) {
+                loadLevel(currentLevel + 1);
+                gameRunning = true;
+                requestAnimationFrame(gameLoop);
+            } else {
+                currentLevel = 1;
+                player.hp = 100;
+                player.gold = 0;
+                loadLevel(1);
+                gameRunning = true;
+                requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+
+<style>
+#mobile-controls{display:none; width:100%; max-width:900px; margin:12px auto 0; gap:12px; align-items:center; justify-content:space-between; user-select:none; -webkit-user-select:none; touch-action:none}
+#mobile-controls .pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,48px);gap:5px}
+#mobile-controls button{border:1px solid #34d399;background:#0f172a;color:#f8fafc;border-radius:12px;font-weight:800;font-size:16px;box-shadow:0 3px 0 #047857;touch-action:none}
+#mobile-controls button:active{transform:translateY(2px);box-shadow:none;background:#065f46}
+#mobile-controls .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#mobile-controls .actions button{padding:13px 10px;min-width:76px;font-size:11px}
+@media (pointer:coarse), (max-width:700px){#mobile-controls{display:flex} body{padding-bottom:12px} #game-container{border-radius:12px} #mobile-controls .pad button[data-key="arrowup"]{grid-column:2;grid-row:1} #mobile-controls .pad button[data-key="arrowleft"]{grid-column:1;grid-row:2} #mobile-controls .pad button[data-key="arrowdown"]{grid-column:2;grid-row:2} #mobile-controls .pad button[data-key="arrowright"]{grid-column:3;grid-row:2}}
+</style>
+<div id="mobile-controls" aria-label="Dokunmatik oyun kontrolleri">
+  <div class="pad">
+    <button data-key="arrowup" aria-label="Yukarı">▲</button>
+    <button data-key="arrowleft" aria-label="Sol">◀</button>
+    <button data-key="arrowdown" aria-label="Aşağı">▼</button>
+    <button data-key="arrowright" aria-label="Sağ">▶</button>
+  </div>
+  <div class="actions">
+    <button data-key=" " >⚽ ŞUT</button>
+    <button data-key="f">🔥 SÜPER ŞUT</button>
+  </div>
+</div>
+<script>
+(function(){
+ const controls=document.getElementById('mobile-controls');
+ function fire(key,type){
+   const k=key===' '?' ':key;
+   window.dispatchEvent(new KeyboardEvent(type,{key:k, bubbles:true}));
+ }
+ controls.querySelectorAll('button[data-key]').forEach(btn=>{
+   const key=btn.dataset.key;
+   const down=e=>{e.preventDefault(); fire(key,'keydown');};
+   const up=e=>{e.preventDefault(); fire(key,'keyup');};
+   btn.addEventListener('pointerdown',down);
+   btn.addEventListener('pointerup',up);
+   btn.addEventListener('pointercancel',up);
+   btn.addEventListener('pointerleave',up);
+ });
+})();
+</script>
+
+</body>
+</html>
+
